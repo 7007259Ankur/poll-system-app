@@ -1,11 +1,12 @@
 import http from "http";
 import mongoose from "mongoose";
 import { Server } from "socket.io";
-import app from "./app"; // Ensure app.ts exists and exports 'app'
+import cors from "cors"; // ✅ Import cors
+import app from "./app"; 
 import { pollSocket } from "./sockets/poll.socket";
 import dotenv from "dotenv";
-dotenv.config();
 
+dotenv.config();
 
 const PORT = process.env.PORT || 5000;
 
@@ -20,23 +21,31 @@ mongoose
 
 const server = http.createServer(app);
 
-// 2. Setup Socket.io
-// Inside src/server.ts
+// ✅ 2. Define Allowed Origins (Centralized List)
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5000",
+  process.env.CLIENT_URL || "", 
+  "https://fluffy-dieffenbachia-0ec496.netlify.app" // Your Netlify URL
+];
+
+// ✅ 3. Apply CORS to Express (Fixes the "History" fetch error)
+// Note: This attempts to apply it here, but checking app.ts is recommended (see below)
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+
+// ✅ 4. Setup Socket.io with the same origins
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5000",
-      // Add "|| ''" to prevent undefined errors
-      process.env.CLIENT_URL || "", 
-      "https://fluffy-dieffenbachia-0ec496.netlify.app"
-    ],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true
   },
 });
 
-// 3. Initialize Socket Logic
+// 5. Initialize Socket Logic
 pollSocket(io);
 
 server.listen(PORT, () => {
